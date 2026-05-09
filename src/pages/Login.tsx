@@ -40,6 +40,17 @@ const Login: React.FC = () => {
               <span className="text-lg">Staff Auth Portal</span>
             </button>
 
+            {import.meta.env.VITE_PREFECT_FORM_URL && (
+              <a
+                href={import.meta.env.VITE_PREFECT_FORM_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center justify-center gap-4 py-4 px-8 bg-slate-800 text-slate-300 font-bold rounded-[24px] border-2 border-slate-700 hover:bg-slate-700 hover:text-white transition-all active:scale-[0.98]"
+              >
+                New Prefect Registration
+              </a>
+            )}
+
             <div className="pt-8 flex flex-col items-center gap-4">
                <div className="h-[2px] w-12 bg-slate-700 rounded-full"></div>
                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest max-w-[200px] leading-relaxed">

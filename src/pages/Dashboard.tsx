@@ -21,12 +21,20 @@ const Dashboard: React.FC = () => {
   const [reportDetails, setReportDetails] = useState('');
   const [reportType, setReportType] = useState<'Late' | 'Absent' | 'Misconduct' | 'Duty failure'>('Late');
 
-  const handleScan = async (prefectId: string) => {
+  const handleScan = async (qrData: string) => {
     if (scanResult?.status === 'pending' || isReporting) return;
 
     setScanResult({ status: 'pending', message: 'Verifying prefect...' });
 
     try {
+      // Parse format: id|token
+      const [prefectId, securityToken] = qrData.split('|');
+
+      if (!prefectId || !securityToken) {
+        setScanResult({ status: 'error', message: 'Invalid QR format. Use official ID card.' });
+        return;
+      }
+
       const prefectDoc = await getDoc(doc(db, 'prefects', prefectId));
       if (!prefectDoc.exists()) {
         setScanResult({ status: 'error', message: 'Prefect not found in database.' });
@@ -34,6 +42,13 @@ const Dashboard: React.FC = () => {
       }
 
       const prefectData = prefectDoc.data();
+      
+      // Token verification logic
+      if (prefectData.token !== securityToken) {
+        setScanResult({ status: 'error', message: 'Security Token mismatch. Unauthorized ID.' });
+        return;
+      }
+
       if (prefectData.status === 'suspended') {
         setScanResult({ status: 'error', message: 'This prefect is currently SUSPENDED.' });
         return;
