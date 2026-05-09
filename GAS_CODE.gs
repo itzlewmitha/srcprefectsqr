@@ -11,14 +11,18 @@
  * 7. Set up a trigger: 'Triggers' > 'Add Trigger' > Choose 'onFormSubmit' > 'From spreadsheet' > 'On form submit'.
  */
 
-const PROJECT_ID = "YOUR_PROJECT_ID";
-const DATABASE_ID = "(default)"; // Or your specific DB ID
+const PROJECT_ID = "rahulaweb-f4080";
+const DATABASE_ID = "(default)";
 const EMAIL_SUBJECT = "Prefect Registration Verified - Your ID Card";
 
 /**
  * Main function triggered by form submission
  */
 function onFormSubmit(e) {
+  if (!e || !e.namedValues) {
+    Logger.log("Error: This function must be triggered by a Form Submission, not run manually.");
+    return;
+  }
   const responses = e.namedValues;
   const name = responses['Name'][0];
   const grade = responses['Grade'][0];
