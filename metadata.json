@@ -1,0 +1,6 @@
+{
+  "name": "PrefectTrack Pro",
+  "description": "A comprehensive school prefect attendance and duty tracking system with QR-base scanning, automated reporting, and role-based access control.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["QR Scanning", "Attendance Logs", "Admin Panel"]
+}

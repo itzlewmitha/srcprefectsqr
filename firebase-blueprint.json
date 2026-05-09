@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "Prefect": {
+      "title": "Prefect",
+      "description": "Details of a registered school prefect.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Prefect ID" },
+        "name": { "type": "string", "description": "Full name of the prefect" },
+        "grade": { "type": "string", "description": "Grade/Class of the prefect" },
+        "email": { "type": "string", "format": "email", "description": "Contact email" },
+        "status": { "type": "string", "enum": ["active", "suspended"], "description": "Current status" },
+        "createdAt": { "type": "number", "description": "Timestamp of registration" }
+      },
+      "required": ["id", "name", "grade", "email", "status"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "An attendance log entry.",
+      "type": "object",
+      "properties": {
+        "prefectId": { "type": "string", "description": "Reference to Prefect ID" },
+        "timestamp": { "type": "number", "description": "Time of scan" },
+        "category": { "type": "string", "enum": ["Morning", "Interval", "End", "Special"], "description": "Classification based on time" },
+        "teacherId": { "type": "string", "description": "UID of the teacher who scanned" },
+        "date": { "type": "string", "description": "ISO date string (YYYY-MM-DD)" }
+      },
+      "required": ["prefectId", "timestamp", "category", "teacherId", "date"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A misconduct or duty failure report.",
+      "type": "object",
+      "properties": {
+        "prefectId": { "type": "string", "description": "Reference to Prefect ID" },
+        "teacherId": { "type": "string", "description": "UID of the teacher reporting" },
+        "timestamp": { "type": "number", "description": "Time of report" },
+        "type": { "type": "string", "enum": ["Late", "Absent", "Misconduct", "Duty failure"], "description": "Type of report" },
+        "details": { "type": "string", "description": "Detailed explanation" }
+      },
+      "required": ["prefectId", "teacherId", "timestamp", "type", "details"]
+    },
+    "User": {
+      "title": "User",
+      "description": "App user (Teacher or Admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email" },
+        "role": { "type": "string", "enum": ["teacher", "admin"], "description": "Access level" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/prefects/{prefectId}": {
+      "schema": "Prefect",
+      "description": "Collection of all prefects."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Logs of all attendance scans."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Reports filed by teachers."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Registered teachers and admins."
+    }
+  }
+}

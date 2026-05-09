@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  --color-bento-bg: #F8FAFC;
+  --color-bento-border: #0F172A;
+  --shadow-bento: 4px 4px 0px 0px #0F172A;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-bento-bg text-slate-900;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight text-bento-border;
+  }
+}
+
+@layer components {
+  .bento-card {
+    @apply bg-white border-2 border-bento-border rounded-[24px] shadow-bento overflow-hidden transition-all;
+  }
+  
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest border border-bento-border;
+  }
+  
+  .btn-bento-primary {
+    @apply bg-blue-600 text-white font-bold py-3 px-6 rounded-xl border-2 border-bento-border shadow-[2px_2px_0px_0px_#0F172A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all;
+  }
+
+  .btn-bento-secondary {
+    @apply bg-white text-bento-border font-bold py-3 px-6 rounded-xl border-2 border-bento-border shadow-[2px_2px_0px_0px_#0F172A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all;
+  }
+}
+
+/* html5-qrcode improvements */
+#qr-reader {
+  border: none !important;
+}
+
+#qr-reader__scan_region {
+  border-radius: 1.5rem !important;
+  overflow: hidden !important;
+}
+
+#qr-reader img {
+  display: none !important;
+}
+
+#qr-reader button {
+  @apply bg-bento-border text-white font-bold py-2 px-4 rounded-xl border-2 border-bento-border shadow-[2px_2px_0px_0px_#0F172A] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all mt-4 cursor-pointer;
+}
+
+#qr-reader__dashboard {
+  background: white !important;
+  border-radius: 1.5rem !important;
+  margin-top: 1rem !important;
+}
