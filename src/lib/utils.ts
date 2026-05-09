@@ -1,33 +1,33 @@
 import { format, isWithinInterval, setHours, setMinutes } from 'date-fns';
 
-export type AttendanceCategory = 'Morning' | 'Interval' | 'End' | 'Special';
+export type AttendanceCategory = 'Morning Progress' | 'Interval Time' | 'End of School' | 'Special Occasion';
 
 export const getAttendanceCategory = (date: Date): AttendanceCategory => {
   const now = date;
   
-  // Morning: 07:00 - 10:30
+  // Morning Progress: 07:00 - 10:30
   if (isWithinInterval(now, {
     start: setMinutes(setHours(now, 7), 0),
     end: setMinutes(setHours(now, 10), 30)
-  })) return 'Morning';
+  })) return 'Morning Progress';
 
-  // Interval: 10:30 - 13:00
+  // Interval Time: 10:30 - 13:00
   if (isWithinInterval(now, {
     start: setMinutes(setHours(now, 10), 31),
     end: setMinutes(setHours(now, 13), 0)
-  })) return 'Interval';
+  })) return 'Interval Time';
 
-  // End: After 13:25
-  if (now >= setMinutes(setHours(now, 13), 25)) return 'End';
+  // End of School: After 13:25
+  if (now >= setMinutes(setHours(now, 13), 25)) return 'End of School';
 
-  return 'Special'; // Default or outside defined ranges
+  return 'Special Occasion'; // Default or outside defined ranges
 };
 
 export const getCategoryColor = (category: AttendanceCategory) => {
   switch (category) {
-    case 'Morning': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'Interval': return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'End': return 'bg-sky-100 text-sky-700 border-sky-200';
-    case 'Special': return 'bg-purple-100 text-purple-700 border-purple-200';
+    case 'Morning Progress': return 'bg-emerald-100 text-emerald-700 border-emerald-900';
+    case 'Interval Time': return 'bg-amber-100 text-amber-700 border-amber-900';
+    case 'End of School': return 'bg-sky-100 text-sky-700 border-sky-900';
+    case 'Special Occasion': return 'bg-purple-100 text-purple-700 border-purple-900';
   }
 };

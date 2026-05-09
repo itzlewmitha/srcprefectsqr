@@ -40,9 +40,9 @@ const Dashboard: React.FC = () => {
       }
 
       const now = new Date();
-      const category = isSpecialMode ? 'Special' : getAttendanceCategory(now);
+      const category = isSpecialMode ? 'Special Occasion' : getAttendanceCategory(now);
       const dateStr = format(now, 'yyyy-MM-dd');
-      const attendanceId = `${prefectId}_${category}_${dateStr}`;
+      const attendanceId = `${prefectId}_${category.replace(/\s+/g, '_')}_${dateStr}`;
 
       // Check if already scanned
       const existingScan = await getDoc(doc(db, 'attendance', attendanceId));
@@ -131,11 +131,11 @@ const Dashboard: React.FC = () => {
             onClick={() => setIsSpecialMode(false)}
             className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSpecialMode ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            Routine
+            Auto Detect
           </button>
           <button
             onClick={() => setIsSpecialMode(true)}
-            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSpecialMode ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSpecialMode ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
              Special
           </button>

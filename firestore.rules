@@ -1,107 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 1. Master Deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- Helpers ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function existing() {
-      return resource.data;
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function getAuthData() {
+      return get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data;
     }
 
     function isAdmin() {
-      // Hardcoded initial admin or check for admin role in authorized_users collection
-      let authDoc = get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data;
       return isSignedIn() && (
         request.auth.token.email == 'pixstudios.lk@gmail.com' || 
-        authDoc.role == 'admin'
+        getAuthData().role == 'admin'
       );
     }
 
     function isTeacher() {
-      let authDoc = get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data;
-      return isSignedIn() && (
-        authDoc.role == 'teacher' || isAdmin()
-      );
+      return isSignedIn() && (getAuthData().role == 'teacher' || isAdmin());
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // --- Collections ---
-
-    // Prefects: Managed by Admins, Read by Teachers
     match /prefects/{prefectId} {
       allow read: if isTeacher();
-      allow create, update: if isAdmin() && isValidPrefect(incoming());
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
-      
-      function isValidPrefect(p) {
-        return p.id is string && p.id.size() <= 64 &&
-               p.name is string && p.name.size() <= 100 &&
-               p.grade is string && p.grade.size() <= 20 &&
-               p.email is string && p.email.size() <= 100 &&
-               p.status in ['active', 'suspended'];
-      }
     }
 
-    // Attendance: Created by Teachers, Read by Admins/Teachers
     match /attendance/{attendanceId} {
+      // Attendance is immutable: created once, never updated or deleted
       allow read: if isTeacher();
-      allow create: if isTeacher() && isValidAttendance(incoming());
-      allow delete: if isAdmin();
-      
-      function isValidAttendance(a) {
-        return a.prefectId is string && isValidId(a.prefectId) &&
-               a.timestamp == request.time &&
-               a.category in ['Morning', 'Interval', 'End', 'Special'] &&
-               a.teacherId == request.auth.uid &&
-               a.date is string && a.date.size() == 10;
-      }
+      allow create: if isTeacher() 
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.teacherId == request.auth.uid;
     }
 
-    // Reports: Created by Teachers, Read by Admins
     match /reports/{reportId} {
       allow read: if isAdmin();
-      allow create: if isTeacher() && isValidReport(incoming());
-      
-      function isValidReport(r) {
-        return r.prefectId is string && isValidId(r.prefectId) &&
-               r.teacherId == request.auth.uid &&
-               r.timestamp == request.time &&
-               r.type in ['Late', 'Absent', 'Misconduct', 'Duty failure'] &&
-               r.details is string && r.details.size() <= 1000;
-      }
+      allow create: if isTeacher() 
+        && request.resource.data.teacherId == request.auth.uid;
     }
 
-    // Authorized Users: Managed by Admins
     match /authorized_users/{email} {
       allow read: if isSignedIn();
-      allow create, update: if isAdmin() && isValidUser(incoming());
-      allow delete: if isAdmin();
-
-      function isValidUser(u) {
-        return u.email is string && u.role in ['teacher', 'admin'];
-      }
+      allow write: if isAdmin();
     }
   }
 }

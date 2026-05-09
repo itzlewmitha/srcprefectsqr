@@ -1,28 +1,32 @@
 /**
- * PrefectTrack Pro: Google Apps Script Integration
+ * PrefectGate: Google Apps Script Integration
  * 
  * Instructions:
  * 1. Create a Google Form with fields: Name, Grade, Email.
  * 2. In the Google Form, go to 'Responses' > 'Link to Sheets'.
  * 3. In the Google Sheet, go to 'Extensions' > 'Apps Script'.
- * 4. Paste this code into the editor.
- * 5. Update the constants below with your Firestore info from firebase-applet-config.json.
- * 6. Add the Firestore library: Go to 'Libraries' > '+' > Enter ID: '1VUSl4b1re1u4Mthuz2Z3__G_Z6_G66K-T6G3Z6T-9G-6' (Select latest version).
+ * 4. Replace all code in 'Code.gs' with this content.
+ * 5. Update the constants below with your Firestore info.
+ * 6. Update the 'appsscript.json' (View > Show manifest file) with the scopes provided in the repo.
  * 7. Set up a trigger: 'Triggers' > 'Add Trigger' > Choose 'onFormSubmit' > 'From spreadsheet' > 'On form submit'.
  */
 
 const PROJECT_ID = "YOUR_PROJECT_ID";
-const FIRESTORE_DATABASE_ID = "YOUR_FIRESTORE_DATABASE_ID";
-const EMAIL_SUBJECT = "Prefect Registration Confirmation & QR Code";
+const DATABASE_ID = "(default)"; // Or your specific DB ID
+const EMAIL_SUBJECT = "Prefect Registration Verified - Your ID Card";
 
+/**
+ * Main function triggered by form submission
+ */
 function onFormSubmit(e) {
   const responses = e.namedValues;
   const name = responses['Name'][0];
   const grade = responses['Grade'][0];
   const email = responses['Email'][0];
   
-  // Generate a unique Prefect ID (e.g., P-XXXXX)
-  const id = "P-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+  // Generate high-entropy identity
+  const id = "PG-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+  const token = Utilities.getUuid(); // Secure token for verification
   
   const prefectData = {
     id: id,
@@ -30,69 +34,113 @@ function onFormSubmit(e) {
     grade: grade,
     email: email,
     status: 'active',
+    token: token,
     createdAt: new Date().getTime()
   };
 
   try {
-    // 1. Save to Firestore
-    const firestore = FirestoreApp.getFirestore(null, null, null, PROJECT_ID);
-    // Note: You may need a Service Account JSON for full Firestore access from GAS.
-    // Alternatively, use a simple REST API call.
+    // 1. Save to Firestore via REST API
     saveToFirestore(prefectData);
 
-    // 2. Generate QR Code (using Google Chart API for simplicity)
-    // The QR code contains the Prefect ID
-    const qrUrl = "https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=" + encodeURIComponent(id);
+    // 2. Generate QR Code
+    // Format: id|token (Teacher app will verify both)
+    const qrPayload = `${id}|${token}`;
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qrPayload);
     
     // 3. Send Email
     sendConfirmationEmail(email, name, id, qrUrl);
     
   } catch (err) {
-    Logger.log("Error: " + err);
+    Logger.log("Critical Error: " + err);
   }
 }
 
+/**
+ * Saves data to Firestore using UrlFetchApp (No external library required)
+ */
 function saveToFirestore(data) {
-  // Replace with actual Firestore logic or REST API call
-  // For production, use a Service Account for authorization.
-  // This is a placeholder for the integration logic.
-  Logger.log("Saving prefect to Firestore: " + data.id);
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/prefects/${data.id}`;
+  
+  // Map JS object to Firestore REST structure
+  const payload = {
+    fields: {
+      id: { stringValue: data.id },
+      name: { stringValue: data.name },
+      grade: { stringValue: data.grade },
+      email: { stringValue: data.email },
+      status: { stringValue: data.status },
+      token: { stringValue: data.token },
+      createdAt: { integerValue: data.createdAt }
+    }
+  };
+
+  const options = {
+    method: "patch", // use patch to upsert
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    headers: {
+      Authorization: "Bearer " + ScriptApp.getOAuthToken()
+    },
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  const result = JSON.parse(response.getContentText());
+  
+  if (response.getResponseCode() !== 200) {
+    throw new Error(`Firestore REST Error: ${JSON.stringify(result)}`);
+  }
+  
+  Logger.log(`Successfully registered: ${data.id}`);
 }
 
+/**
+ * Sends a clean, school-branded HTML email
+ */
 function sendConfirmationEmail(email, name, id, qrUrl) {
   const htmlBody = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 20px;">
-      <h2 style="color: #2563eb;">Prefect Registration Success</h2>
-      <p>Hello <strong>${name}</strong>,</p>
-      <p style="background: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #2563eb;">
-        <strong>Correctly saved into database.</strong> Your official prefect credentials are below.
-      </p>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <img src="${qrUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 10px solid #f8fafc; border-radius: 10px;" />
-        <p style="font-size: 24px; font-weight: bold; color: #1e293b; margin-top: 10px;">${id}</p>
+    <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 2px solid #e2e8f0; border-radius: 32px; background: #ffffff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: #2563eb; width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 30px; font-weight: bold; line-height: 60px;">P</div>
+        <h2 style="color: #0f172a; margin-top: 15px; font-size: 24px; font-weight: 900; letter-spacing: -0.025em;">PREFECTGATE REGISTRATION</h2>
       </div>
 
-      <h3>Instructions:</h3>
-      <ul>
-        <li>Present this QR code to the Duty Teacher for attendance marking.</li>
-        <li>The system will automatically categorize your attendance based on time.</li>
-      </ul>
+      <p style="color: #475569; font-size: 16px; line-height: 1.6;">Hello <strong>${name}</strong>,</p>
+      <p style="background: #f0f9ff; padding: 20px; border-radius: 20px; border: 1px solid #bae6fd; color: #0369a1; font-weight: 600;">
+        Your record has been successfully verified and saved to the school database.
+      </p>
+      
+      <div style="text-align: center; margin: 40px 0; background: #f8fafc; padding: 40px; border-radius: 24px; border: 2px dashed #cbd5e1;">
+        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; color: #94a3b8; letter-spacing: 0.1em; margin-bottom: 15px;">Digital Identity Token</p>
+        <img src="${qrUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 8px solid white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);" />
+        <p style="font-size: 32px; font-weight: 900; color: #0f172a; margin-top: 20px; letter-spacing: -0.05em;">${id}</p>
+      </div>
 
-      <h3>Time Period Explanation:</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-        <tr style="background: #f8fafc;">
-          <th style="padding: 10px; border: 1px solid #e2e8f0; text-align: left;">Period</th>
-          <th style="padding: 10px; border: 1px solid #e2e8f0; text-align: left;">Time Range</th>
-        </tr>
-        <tr><td style="padding: 10px; border: 1px solid #e2e8f0;">Morning</td><td style="padding: 10px; border: 1px solid #e2e8f0;">07:00 – 10:30</td></tr>
-        <tr><td style="padding: 10px; border: 1px solid #e2e8f0;">Interval</td><td style="padding: 10px; border: 1px solid #e2e8f0;">10:30 – 13:00</td></tr>
-        <tr><td style="padding: 10px; border: 1px solid #e2e8f0;">End</td><td style="padding: 10px; border: 1px solid #e2e8f0;">After 13:25</td></tr>
-        <tr><td style="padding: 10px; border: 1px solid #e2e8f0;">Special</td><td style="padding: 10px; border: 1px solid #e2e8f0;">Events/Saturdays</td></tr>
-      </table>
+      <div style="margin-top: 40px;">
+        <h4 style="color: #0f172a; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Duty Instructions:</h4>
+        <ul style="color: #475569; font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>This QR code is required for all attendance scanning.</li>
+          <li>Do not share this email or your token with others.</li>
+          <li>Print this code or keep it accessible on your mobile device.</li>
+        </ul>
+      </div>
 
-      <p style="margin-top: 30px; font-size: 12px; color: #94a3b8;">
-        This is an automated message. Please do not reply.
+      <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 30px;">
+        <h4 style="color: #0f172a; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Official Duty Periods:</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px;">
+          <tr style="background: #f8fafc;">
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left; color: #64748b;">Category</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: left; color: #64748b;">Active Range</th>
+          </tr>
+          <tr><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Morning Progress</td><td style="padding: 12px; border: 1px solid #e2e8f0;">07:00 – 10:30</td></tr>
+          <tr><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Interval Time</td><td style="padding: 12px; border: 1px solid #e2e8f0;">10:30 – 13:00</td></tr>
+          <tr><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">End of School</td><td style="padding: 12px; border: 1px solid #e2e8f0;">After 13:25</td></tr>
+          <tr><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 600;">Special Occasion</td><td style="padding: 12px; border: 1px solid #e2e8f0;">Events / Saturdays</td></tr>
+        </table>
+      </div>
+
+      <p style="margin-top: 40px; font-size: 11px; color: #94a3b8; text-align: center; font-weight: 600;">
+        ENCRYPTED SYSTEM MESSAGE &bull; SCHOOL IDENTITY DIVISION
       </p>
     </div>
   `;

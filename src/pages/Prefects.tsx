@@ -34,6 +34,16 @@ const Prefects: React.FC = () => {
     }
   };
 
+  const removePrefect = async (id: string) => {
+    if (!isHeadAdmin) return;
+    if (!window.confirm('PERMANENTLY delete this prefect? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'prefects', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `prefects/${id}`);
+    }
+  };
+
   const filteredPrefects = prefects.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -110,6 +120,12 @@ const Prefects: React.FC = () => {
                       ) : (
                         <><UserCheck className="w-4 h-4" /> Restore Access</>
                       )}
+                    </button>
+                    <button
+                      onClick={() => removePrefect(prefect.id)}
+                      className="p-3 bg-white border-2 border-slate-100 text-slate-300 hover:text-red-600 hover:border-red-600 rounded-xl transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 )}
